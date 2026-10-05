@@ -673,11 +673,10 @@ let aiHist = [], aiBusy = false;
 
 fab.onclick = () => {
   panel.classList.toggle("open");
-  const hasKey = !!localStorage.getItem("cuaca_ai_key");
-  keyBox.style.display = hasKey ? "none" : "block";
-  form.style.display = hasKey ? "flex" : "none";
-  document.getElementById("chatChips").style.display = hasKey ? "flex" : "none";
-  if (hasKey && !aiHist.length) aiSay("Halo! 👋 Tanya apa saja — cuaca, gempa/banjir, atau keperluan lainnya. Aku jawab pakai data live di halaman ini.");
+  keyBox.style.display = "none";
+  form.style.display = "flex";
+  document.getElementById("chatChips").style.display = "flex";
+  if (!aiHist.length) aiSay("Halo! 👋 Aku Nana. Tanya apa saja — cuaca, gempa/banjir, atau keperluan lainnya. Aku jawab pakai data live di halaman ini, tanpa perlu API key.");
 };
 document.getElementById("keySave").onclick = () => {
   const k = document.getElementById("keyInput").value.trim();
@@ -760,7 +759,7 @@ async function aiGenerate(key, body){
   if (t) return { fake:true, text:t };
   throw new Error("Semua sumber AI gagal dihubungi");
 }
-async async function aiSend(text){
+async function aiSend(text){
   if (aiBusy) return;
   aiBusy = true;
   aiSay(esc(text), "u");
