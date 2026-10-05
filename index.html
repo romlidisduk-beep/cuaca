@@ -781,13 +781,7 @@ form.onsubmit = e => { e.preventDefault(); const t = input.value.trim(); if (t) 
 #nanaBar button{background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer}
 #nanaPanel iframe{flex:1;width:100%;border:0}
 </style>
-<button id="nanaFab">💬 Chat AI</button>
-<div id="nanaWrap"><div id="nanaBack"></div><div id="nanaPanel"><div id="nanaBar"><span>Chat AI — Nana</span><button id="nanaClose">✕</button></div><iframe src="https://romlidisduk-beep.github.io/nana/" title="Chat AI Nana" loading="lazy"></iframe></div></div>
-<script>
-const fab=document.getElementById('nanaFab'),wrap=document.getElementById('nanaWrap');
-fab.onclick=()=>wrap.classList.add('open');
-document.getElementById('nanaClose').onclick=()=>wrap.classList.remove('open');
-document.getElementById('nanaBack').onclick=()=>wrap.classList.remove('open');
-</script>
+<button id="nanaFab" onclick="document.getElementById('nanaWrap').classList.add('open')">💬 Chat AI</button>
+<div id="nanaWrap"><div id="nanaBack" onclick="document.getElementById('nanaWrap').classList.remove('open')"></div><div id="nanaPanel"><div id="nanaBar"><span>Chat AI — Nana</span><button onclick="document.getElementById('nanaWrap').classList.remove('open')">✕</button></div><iframe src="https://romlidisduk-beep.github.io/nana/" title="Chat AI Nana" loading="lazy"></iframe></div></div>
 </body>
 </html>
