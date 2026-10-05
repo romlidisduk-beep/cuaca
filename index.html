@@ -771,8 +771,8 @@ form.onsubmit = e => { e.preventDefault(); const t = input.value.trim(); if (t) 
 
 <!-- Chat AI Nana widget -->
 <style>
-#nanaFab{position:fixed;bottom:18px;right:18px;z-index:9999;display:flex;align-items:center;gap:8px;background:#1d4ed8;color:#fff;border:0;border-radius:999px;padding:12px 18px;font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);cursor:pointer}
-#nanaWrap{position:fixed;inset:0;z-index:9998;display:none}
+#nanaFab{position:fixed !important;bottom:96px;right:16px;z-index:2147483647;display:flex;align-items:center;gap:8px;background:#1d4ed8;color:#fff;border:0;border-radius:999px;padding:12px 18px;font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.4);cursor:pointer}
+#nanaWrap{position:fixed;inset:0;z-index:2147483646;display:none}
 #nanaWrap.open{display:block}
 #nanaBack{position:absolute;inset:0;background:rgba(0,0,0,.55)}
 #nanaPanel{position:absolute;bottom:0;right:0;left:0;margin:0 auto;max-width:560px;height:80dvh;background:#0f1420;border-radius:18px 18px 0 0;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.5)}
