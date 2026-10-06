@@ -809,6 +809,8 @@ window.IP_LOC = null;
 const ipTog = document.getElementById("ipToggle");
 const ipStat = document.getElementById("ipStatus");
 function ipRender(){
+  const ipStat = document.getElementById("ipStatus");
+  if (!ipStat) return;
   if (window.IP_LOC){
     ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> — cuaca &amp; alarm mengikuti daerahmu. <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
     const off=document.getElementById("ipOff");
@@ -817,7 +819,11 @@ function ipRender(){
     ipStat.textContent = "Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.";
   }
 }
-ipTog.addEventListener("change", async () => {
+document.addEventListener("change", async (ev) => {
+  const ipTog = ev.target && ev.target.id === "ipToggle" ? ev.target : null;
+  if (!ipTog) return;
+  const ipStat = document.getElementById("ipStatus");
+  if (!ipStat) return;
   if (!ipTog.checked){
     window.IP_LOC = null; ipRender();
     try{ localStorage.setItem("cuaca_ip_auto","off"); }catch(e){}
@@ -837,7 +843,7 @@ ipTog.addEventListener("change", async () => {
   }
 });
 // pulihkan status ON dari kunjungan sebelumnya
-try{ if(localStorage.getItem("cuaca_ip_auto")==="on"){ ipTog.checked=true; ipTog.dispatchEvent(new Event("change")); } }catch(e){}
+try{ if(localStorage.getItem("cuaca_ip_auto")==="on"){ const t=document.getElementById("ipToggle"); if(t){ t.checked=true; t.dispatchEvent(new Event("change")); } } }catch(e){}
 
 form.onsubmit = e => { e.preventDefault(); const t = input.value.trim(); if (t) aiSend(t); };
 </script>
