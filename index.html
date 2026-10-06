@@ -813,7 +813,7 @@ function ipRender(){
   const ipStat = document.getElementById("ipStatus");
   if (!ipStat) return;
   if (window.IP_LOC){
-    ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b>"+(window.IP_LOC.snap||"")+" — cuaca &amp; alarm mengikuti daerahmu." <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
+    ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b>"+(window.IP_LOC.snap||"")+" — cuaca &amp; alarm mengikuti daerahmu. <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
     const off=document.getElementById("ipOff");
     if(off) off.onclick = e => { e.preventDefault(); const tg=document.getElementById("ipToggle"); if(tg){ tg.checked=false; tg.dispatchEvent(new Event("change")); } };
   } else {
