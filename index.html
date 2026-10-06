@@ -806,15 +806,13 @@ async function aiSend(text){
 }
 /* ---- LOKASI OTOMATIS VIA IP (toggle) ---- */
 window.IP_LOC = null;
-const ipTog = document.getElementById("ipToggle");
-const ipStat = document.getElementById("ipStatus");
 function ipRender(){
   const ipStat = document.getElementById("ipStatus");
   if (!ipStat) return;
   if (window.IP_LOC){
     ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> — cuaca &amp; alarm mengikuti daerahmu. <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
     const off=document.getElementById("ipOff");
-    if(off) off.onclick = e => { e.preventDefault(); ipTog.checked=false; ipTog.dispatchEvent(new Event("change")); };
+    if(off) off.onclick = e => { e.preventDefault(); const tg=document.getElementById("ipToggle"); if(tg){ tg.checked=false; tg.dispatchEvent(new Event("change")); } };
   } else {
     ipStat.textContent = "Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.";
   }
