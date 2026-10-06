@@ -750,13 +750,22 @@ async function aiGenerate(key, body){
         body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:sys}, {role:"user", content: ctx+"\nUser: "+turn} ] }) });
     const j2 = await r2.json();
     const c = j2.choices && j2.choices[0] && j2.choices[0].message && j2.choices[0].message.content;
-    if (c) return { fake:true, text:c };
+    if (c && c.trim() && c.trim() !== "{}") return { fake:true, text:c };
   }catch(e){}
   // 3) Fallback GET ringan (jaringan lambat)
-  const q = encodeURIComponent((sys.slice(0,1200)+"\nUser: "+turn).slice(0,1800));
-  const r3 = await fetchT("https://text.pollinations.ai/"+q, 60000);
-  const t = await r3.text();
-  if (t) return { fake:true, text:t };
+  const q = encodeURIComponent(("Jawab singkat bahasa Indonesia.\nUser: "+turn).slice(0,900));
+  try{
+    const r3 = await fetchT("https://text.pollinations.ai/"+q+"?model=openai", 45000);
+    const t = await r3.text();
+    if (t && t.trim() && t.trim() !== "{}") return { fake:true, text:t };
+  }catch(e){}
+  // 4) Retry POST terakhir (context minimal)
+  const r4 = await fetchT("https://text.pollinations.ai/openai", 60000,
+    { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:"Kamu Nana, asisten cuaca Gresik-Lamongan. Jawab singkat bahasa Indonesia."}, {role:"user", content: turn} ] }) });
+  const j4 = await r4.json();
+  const c4 = j4.choices && j4.choices[0] && j4.choices[0].message && j4.choices[0].message.content;
+  if (c4 && c4.trim()) return { fake:true, text:c4 };
   throw new Error("Semua sumber AI gagal dihubungi");
 }
 async function aiSend(text){
