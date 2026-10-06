@@ -743,11 +743,12 @@ async function aiGenerate(key, body){
   // 2) GRATIS tanpa key: Pollinations (prompt gabungan)
   const sys = body.system_instruction.parts[0].text;
   const turn = body.contents[body.contents.length-1].parts[0].text;
-  const ctx = body.contents.slice(-6).map(c=>(c.role==="model"?"Nayla: ":"User: ")+c.parts[0].text).join("\n");
+  const ctx = body.contents.slice(-4).map(c=>(c.role==="model"?"Nana: ":"User: ")+c.parts[0].text.slice(0,200)).join("\n").slice(0,600);
+  const sysShort = sys.slice(0,900);
   try{
     const r2 = await fetchT("https://text.pollinations.ai/openai", 60000,
       { method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:sys}, {role:"user", content: ctx+"\nUser: "+turn} ] }) });
+        body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:sysShort}, {role:"user", content: ctx+"\nUser: "+turn.slice(0,300)} ] }) });
     const j2 = await r2.json();
     const c = j2.choices && j2.choices[0] && j2.choices[0].message && j2.choices[0].message.content;
     if (c && c.trim() && c.trim() !== "{}") return { fake:true, text:c };
