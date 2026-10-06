@@ -472,7 +472,14 @@ async function load(){
     + '<select id="kabSel" style="'+selStyle+'">'
     + '<option value="">— Pilih kabupaten —</option><option value="Gresik">Gresik</option><option value="Lamongan">Lamongan</option></select>'
     + '<select id="wilSel" style="'+selStyle+';margin-top:8px"><option value="">— Pilih wilayah —</option></select>'
-    + '<div id="wilHasil" style="margin-top:10px;font-size:13px;color:var(--muted)">Pilih kabupaten dan wilayah untuk melihat prakiraan BMKG 3 hari.</div></div>';
+    + '<div id="wilHasil" style="margin-top:10px;font-size:13px;color:var(--muted)">Pilih kabupaten dan wilayah untuk melihat prakiraan BMKG 3 hari.</div>'
+    // --- FITUR LOKASI OTOMATIS VIA IP (bisa ON/OFF) ---
+    + '<div style="margin-top:12px;padding:10px;border-radius:10px;background:#0f1b30;border:1px solid #334155">'
+    + '<label style="display:flex;align-items:center;gap:10px;font-size:13px;cursor:pointer">'
+    + '<input type="checkbox" id="ipToggle" style="width:18px;height:18px;accent-color:#2f6fed">'
+    + '<span>📍 <b>Lokasi otomatis</b> <small style="opacity:.7">(deteksi daerah via IP)</small></span></label>'
+    + '<div id="ipStatus" style="font-size:12px;color:var(--muted);margin-top:6px">Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.</div>'
+    + '</div></div>';
 
   // --- ARENA MODEL ---
   const rainIcon = (tp, desc) => tp>=20 ? "⛈️" : tp>1 ? "🌧️" : /hujan|petir/i.test(desc||"") ? "🌧️" : /berawan|mendung/i.test(desc||"") ? "⛅" : "☀️";
@@ -700,7 +707,8 @@ function aiContext(){
   const q = AI_DATA.quakes.slice(0,5).map(x=>"M"+x.mag.toFixed(1)+" "+x.place+" ("+x.depth+"km)").join("; ") || "tidak ada gempa M≥4.5";
   const al = AI_DATA.alerts.slice(0,6).map(a=>a.text.replace(/<[^>]+>/g,"")).join("; ") || "tidak ada peringatan aktif";
   const b = Object.entries(AI_DATA.bmkg).slice(0,4).map(([n,v])=>n+": "+(v&&v.days[0]?v.days[0].desc+" "+v.days[0].tp+"mm":"?")).join("; ");
-  return "DATA LIVE "+new Date().toLocaleDateString("id-ID")+" (sumber: BMKG, USGS, Open-Meteo):\n"
+  const loc = window.IP_LOC ? ("- Lokasi pengunjung (via IP, aktif): "+window.IP_LOC.kota+" ("+window.IP_LOC.region+") "+window.IP_LOC.lat.toFixed(2)+","+window.IP_LOC.lon.toFixed(2)+" — kalau ditanya cuaca lokasinya, pakai koordinat ini via Open-Meteo.\n") : "";
+  return "DATA LIVE "+new Date().toLocaleDateString("id-ID")+" (sumber: BMKG, USGS, Open-Meteo):\n"+loc
     + "- Peringatan aktif: "+al+"\n- Gempa 7 hari terakhir (Asia Tenggara): "+q+"\n"
     + "- Skor korelasi regional: "+AI_DATA.score+"/100\n- Prakiraan BMKG hari ini: "+b;
 }
@@ -796,6 +804,41 @@ async function aiSend(text){
   }
   aiBusy = false;
 }
+/* ---- LOKASI OTOMATIS VIA IP (toggle) ---- */
+window.IP_LOC = null;
+const ipTog = document.getElementById("ipToggle");
+const ipStat = document.getElementById("ipStatus");
+function ipRender(){
+  if (window.IP_LOC){
+    ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> — cuaca &amp; alarm mengikuti daerahmu. <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
+    const off=document.getElementById("ipOff");
+    if(off) off.onclick = e => { e.preventDefault(); ipTog.checked=false; ipTog.dispatchEvent(new Event("change")); };
+  } else {
+    ipStat.textContent = "Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.";
+  }
+}
+ipTog.addEventListener("change", async () => {
+  if (!ipTog.checked){
+    window.IP_LOC = null; ipRender();
+    try{ localStorage.setItem("cuaca_ip_auto","off"); }catch(e){}
+    return;
+  }
+  try{ localStorage.setItem("cuaca_ip_auto","on"); }catch(e){}
+  ipStat.textContent = "⏳ Mendeteksi lokasi via IP…";
+  try{
+    const r = await fetchT("https://ipwho.is/", 12000);
+    const j = await r.json();
+    if (!j.success) throw new Error(j.message||"gagal");
+    window.IP_LOC = { kota: j.city || j.region || j.country, lat: j.latitude, lon: j.longitude, region: j.region };
+    ipRender();
+    aiSay("📍 Lokasi terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> ("+window.IP_LOC.lat.toFixed(2)+", "+window.IP_LOC.lon.toFixed(2)+"). Cuaca di dashboard utama tetap Gresik–Lamongan, tapi aku (Nana) sekarang tahu daerahmu — tanya aja cuaca kota lain 😉");
+  }catch(e){
+    ipStat.textContent = "⚠️ Gagal deteksi IP ("+e.message+"). Pakai pilihan manual di atas.";
+  }
+});
+// pulihkan status ON dari kunjungan sebelumnya
+try{ if(localStorage.getItem("cuaca_ip_auto")==="on"){ ipTog.checked=true; ipTog.dispatchEvent(new Event("change")); } }catch(e){}
+
 form.onsubmit = e => { e.preventDefault(); const t = input.value.trim(); if (t) aiSend(t); };
 </script>
 
