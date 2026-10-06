@@ -479,6 +479,8 @@ async function load(){
     + '<input type="checkbox" id="ipToggle" style="width:18px;height:18px;accent-color:#2f6fed">'
     + '<span>📍 <b>Lokasi otomatis</b> <small style="opacity:.7">(deteksi daerah via IP)</small></span></label>'
     + '<div id="ipStatus" style="font-size:12px;color:var(--muted);margin-top:6px">Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.</div>'
+    + '<button id="gpsBtn" type="button" style="margin-top:8px;padding:8px 14px;border-radius:10px;background:#7c3aed;color:#fff;font-weight:700;font-size:13px;border:none">📡 Pakai GPS (akurat kecamatan)</button>'
+    + '<div id="gpsStatus" style="font-size:12px;color:var(--muted);margin-top:6px"></div>'
     + '</div></div>';
 
   // --- ARENA MODEL ---
@@ -811,13 +813,52 @@ function ipRender(){
   const ipStat = document.getElementById("ipStatus");
   if (!ipStat) return;
   if (window.IP_LOC){
-    ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> — cuaca &amp; alarm mengikuti daerahmu. <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
+    ipStat.innerHTML = "✅ Terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b>"+(window.IP_LOC.snap||"")+" — cuaca &amp; alarm mengikuti daerahmu." <a href='#' id='ipOff' style='color:#7aa2ff'>matikan</a>";
     const off=document.getElementById("ipOff");
     if(off) off.onclick = e => { e.preventDefault(); const tg=document.getElementById("ipToggle"); if(tg){ tg.checked=false; tg.dispatchEvent(new Event("change")); } };
   } else {
     ipStat.textContent = "Mati — pilih wilayah manual di atas, atau nyalakan untuk deteksi otomatis.";
   }
 }
+document.addEventListener("click", async (ev) => {
+  const btn = ev.target && ev.target.id === "gpsBtn" ? ev.target : null;
+  if (!btn) return;
+  const gpsStat = document.getElementById("gpsStatus");
+  if (!gpsStat) return;
+  if (!navigator.geolocation){ gpsStat.textContent = "⚠️ GPS tidak didukung browser ini."; return; }
+  gpsStat.textContent = "⏳ Meminta izin lokasi & mengukur GPS…";
+  navigator.geolocation.getCurrentPosition(async (pos)=>{
+    const la=pos.coords.latitude, lo=pos.coords.longitude;
+    gpsStat.textContent = "⏳ Mencari nama wilayah…";
+    let nama = la.toFixed(3)+", "+lo.toFixed(3);
+    try{
+      const r=await fetchT("https://nominatim.openstreetmap.org/reverse?format=json&zoom=13&accept-language=id&lat="+la+"&lon="+lo, 15000,
+        {headers:{"User-Agent":"cuaca-dashboard"}});
+      const j=await r.json();
+      const a=j.address||{};
+      nama = a.village || a.suburb || a.town || a.city_district || a.county || a.city || nama;
+    }catch(e){}
+    // snap ke kecamatan BMKG yang tersedia jika dekat (<12km)
+    const KEC = {"Babat":[-7.13,112.35],"Deket":[-7.15,112.40],"Lamongan":[-7.13,112.42],"Sugio":[-7.16,112.44],"Gresik":[-7.16,112.65]};
+    let kec=null, best=1e9;
+    for (const [n,c] of Object.entries(KEC)){
+      const d=Math.hypot(la-c[0], lo-c[1]);
+      if (d<best){best=d; kec=n;}
+    }
+    let tag="";
+    if (best < 0.12){ // ~13km
+      tag = kec==="Gresik" ? "Gresik" : "Lamongan (Kec. "+kec+")";
+      nama = kec;
+    }
+    window.IP_LOC = { kota: nama, lat: la, lon: lo, region: "GPS"+(tag? " — "+tag:""), snap:"" };
+    const ipT=document.getElementById("ipToggle"); if(ipT) ipT.checked=true;
+    gpsStat.innerHTML = "✅ GPS: <b>"+esc(nama)+"</b>"+(tag?" → "+esc(tag):"")+" (akurat ±"+Math.round(pos.coords.accuracy)+" m)";
+    aiSay("📡 Lokasi GPS terkunci: <b>"+esc(nama)+"</b>"+(tag?" ("+esc(tag)+")":"")+" — sekarang aku tahu posisimu tepat!");
+  }, (err)=>{
+    gpsStat.textContent = err.code===1 ? "❌ Izin lokasi ditolak — pakai dropdown manual atau toggle IP." : "⚠️ GPS gagal: "+err.message;
+  }, {enableHighAccuracy:true, timeout:20000});
+});
+
 document.addEventListener("change", async (ev) => {
   const ipTog = ev.target && ev.target.id === "ipToggle" ? ev.target : null;
   if (!ipTog) return;
@@ -834,7 +875,18 @@ document.addEventListener("change", async (ev) => {
     const r = await fetchT("https://ipwho.is/", 12000);
     const j = await r.json();
     if (!j.success) throw new Error(j.message||"gagal");
-    window.IP_LOC = { kota: j.city || j.region || j.country, lat: j.latitude, lon: j.longitude, region: j.region };
+    let kota = j.city || j.region || j.country;
+    let lat = j.latitude, lon = j.longitude, region = j.region || "", snap = "";
+    // Snap terdekat: IP Jawa Timur tapi kota salah baca (mis. Surabaya) -> petakan ke Gresik/Lamongan terdekat
+    const latJatim = lat > -8.3 && lat < -6.1, lonJatim = lon > 110.9 && lon < 114.6;
+    if (latJatim && lonJatim){
+      const dG = Math.hypot(lat-(-7.16), lon-112.65), dL = Math.hypot(lat-(-7.13), lon-112.42);
+      if (Math.min(dG,dL) < 0.75){ // ~80km: area Gresik-Lamongan raya
+        kota = dG <= dL ? "Gresik" : "Lamongan"; region = "Jawa Timur"; snap = " (snap terdekat)";
+        lat = dG <= dL ? -7.16 : -7.13; lon = dG <= dL ? 112.65 : 112.42;
+      }
+    }
+    window.IP_LOC = { kota, lat, lon, region, snap };
     ipRender();
     aiSay("📍 Lokasi terdeteksi: <b>"+esc(window.IP_LOC.kota)+"</b> ("+window.IP_LOC.lat.toFixed(2)+", "+window.IP_LOC.lon.toFixed(2)+"). Cuaca di dashboard utama tetap Gresik–Lamongan, tapi aku (Nana) sekarang tahu daerahmu — tanya aja cuaca kota lain 😉");
   }catch(e){
