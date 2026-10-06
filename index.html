@@ -755,17 +755,18 @@ async function aiGenerate(key, body){
   const sys = body.system_instruction.parts[0].text;
   const turn = body.contents[body.contents.length-1].parts[0].text;
   const ctx = body.contents.slice(-4).map(c=>(c.role==="model"?"Nana: ":"User: ")+c.parts[0].text.slice(0,200)).join("\n").slice(0,600);
+  const locLine = window.IP_LOC ? ("[Lokasi pengunjung via IP: "+window.IP_LOC.kota+", "+window.IP_LOC.region+" ("+window.IP_LOC.lat.toFixed(2)+","+window.IP_LOC.lon.toFixed(2)+")]\n") : "";
   const sysShort = sys.slice(0,900);
   try{
     const r2 = await fetchT("https://text.pollinations.ai/openai", 60000,
       { method:"POST", headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:sysShort}, {role:"user", content: ctx+"\nUser: "+turn.slice(0,300)} ] }) });
+        body: JSON.stringify({ model:"openai", messages:[ {role:"system", content:sysShort}, {role:"user", content: locLine+ctx+"\nUser: "+turn.slice(0,300)} ] }) });
     const j2 = await r2.json();
     const c = j2.choices && j2.choices[0] && j2.choices[0].message && j2.choices[0].message.content;
     if (c && c.trim() && c.trim() !== "{}") return { fake:true, text:c };
   }catch(e){}
   // 3) Fallback GET ringan (jaringan lambat)
-  const q = encodeURIComponent(("Jawab singkat bahasa Indonesia.\nUser: "+turn).slice(0,900));
+  const q = encodeURIComponent(("Jawab singkat bahasa Indonesia."+(window.IP_LOC?" Lokasi pengunjung: "+window.IP_LOC.kota+".":"")+"\nUser: "+turn).slice(0,900));
   try{
     const r3 = await fetchT("https://text.pollinations.ai/"+q+"?model=openai", 45000);
     const t = await r3.text();
